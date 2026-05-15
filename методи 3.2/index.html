@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Задача Рюкзак — Варіант 29</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 14px; background: #f0f0f0; margin: 0; padding: 16px; }
+  h2 { margin: 0 0 12px; font-size: 16px; }
+ 
+  fieldset { border: 1px solid #aaa; border-radius: 4px; padding: 10px 14px; margin-bottom: 10px; background: #fff; }
+  legend { font-weight: bold; padding: 0 4px; }
+ 
+  table { border-collapse: collapse; }
+  table td, table th { padding: 4px 10px; }
+  table th { text-align: left; }
+  table input { width: 55px; padding: 2px 4px; font-size: 13px; }
+ 
+  .row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+ 
+  button {
+    padding: 6px 20px; font-size: 14px; font-weight: bold;
+    background: #2E75B6; color: white; border: none; border-radius: 4px;
+    cursor: pointer; margin-right: 6px;
+  }
+  button:hover { background: #1a5a9a; }
+  button:disabled { background: #999; cursor: not-allowed; }
+  button.secondary { background: #666; }
+  button.secondary:hover { background: #444; }
+ 
+  #result {
+    background: #fff; border: 1px solid #aaa; border-radius: 4px;
+    padding: 10px 14px; margin-bottom: 10px;
+    white-space: pre; font-family: "Courier New", monospace;
+    font-size: 13px; min-height: 60px;
+  }
+ 
+
+  #dp-wrapper { background: #fff; border: 1px solid #aaa; border-radius: 4px; padding: 10px 14px; display: none; }
+  #dp-wrapper h3 { margin: 0 0 8px; font-size: 14px; }
+ 
+  #dp-table-container { overflow-x: auto; }
+ 
+  #dp-table td, #dp-table th {
+    border: 1px solid #ccc; padding: 4px 8px;
+    text-align: center; font-size: 13px;
+    min-width: 32px; font-family: "Courier New", monospace;
+    transition: background 0.2s;
+  }
+  #dp-table th { background: #D9E2F3; font-weight: bold; }
+  #dp-table td { background: #fff; }
+ 
+ 
+  .cell-current  { background: #FFF2CC !important; }   /* жовтий — поточний крок */
+  .cell-filled   { background: #DDEEFF !important; }   /* синій — заповнено */
+  .cell-path     { background: #34d399 !important; font-weight: bold; } /* зелений — оптимальний шлях */
+  .cell-zero     { color: #aaa; }
+ 
+
+  #progress-bar {
+    height: 6px; background: #ddd; border-radius: 3px;
+    margin-bottom: 10px; overflow: hidden; display: none;
+  }
+  #progress-fill { height: 100%; background: #2E75B6; width: 0%; transition: width 0.1s; }
+
+  #step-info { font-size: 12px; color: #555; margin-bottom: 8px; min-height: 18px; }
+
+  .speed-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; }
+  .speed-row input { width: 120px; accent-color: #2E75B6; }
+ 
+  .note { background: #fff8dc; border: 1px solid #e0c000; border-radius: 4px;
+          padding: 6px 10px; font-size: 12px; margin-top: 8px; }
+</style>
+</head>
+<body>
+ 
+<h2>Задача «Рюкзак» — Варіант 29</h2>
+ 
+
+<fieldset>
+  <legend>Вхідні дані</legend>
+  <table>
+    <tr><th>№</th><th>Вага (w)</th><th>Цінність (v)</th></tr>
+    <tr><td>Предмет 1</td><td><input type="number" id="w1" value="2" min="1"></td><td><input type="number" id="v1" value="10" min="0"></td></tr>
+    <tr><td>Предмет 2</td><td><input type="number" id="w2" value="7" min="1"></td><td><input type="number" id="v2" value="4"  min="0"></td></tr>
+    <tr><td>Предмет 3</td><td><input type="number" id="w3" value="9" min="1"></td><td><input type="number" id="v3" value="11" min="0"></td></tr>
+    <tr><td>Предмет 4</td><td><input type="number" id="w4" value="7" min="1"></td><td><input type="number" id="v4" value="9"  min="0"></td></tr>
+  </table>
+  <div class="row" style="margin-top:10px">
+    <label>Місткість рюкзака W =</label>
+    <input type="number" id="W" value="16" min="1" style="width:70px; padding:2px 4px; font-size:13px">
+  </div>
+  <div class="speed-row">
+    <label>Швидкість анімації:</label>
+    <input type="range" id="speed" min="1" max="5" value="3">
+    <span id="speedLabel">Середня</span>
+  </div>
+</fieldset>
+ 
+
+<fieldset>
+  <legend>Керування</legend>
+  <button id="btnRun" onclick="startDP()">▶ Запустити ДП з анімацією</button>
+  <button id="btnSkip" class="secondary" onclick="skipAnim()" disabled>⏩ Пропустити анімацію</button>
+  <button class="secondary" onclick="resetAll()">↺ Скинути</button>
+</fieldset>
+ 
+
+<fieldset>
+  <legend>Результат</legend>
+  <div id="result">Натисни «Запустити»...</div>
+</fieldset>
+ 
+
+<div id="dp-wrapper">
+  <h3>Таблиця dp[i][w]
+    <span style="font-size:11px; font-weight:normal; color:#555; margin-left:8px">
+      🟡 поточний крок &nbsp; 🔵 заповнено &nbsp; 🟢 оптимальний шлях
+    </span>
+  </h3>
+  <div id="progress-bar"><div id="progress-fill"></div></div>
+  <div id="step-info"></div>
+  <div id="dp-table-container"></div>
+</div>
+ 
+<script>
+
+function getItems() {
+  return [1,2,3,4].map(i => ({
+    id: i,
+    w: +document.getElementById('w'+i).value,
+    v: +document.getElementById('v'+i).value
+  }));
+}
+ 
+function getW() { return +document.getElementById('W').value; }
+ 
+function getDelay() {
+  const val = +document.getElementById('speed').value;
+  return [400, 200, 80, 30, 5][val - 1];
+}
+
+const speedLabels = ['Повільна','Середня','Нормальна','Швидка','Миттєво'];
+document.getElementById('speed').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = speedLabels[this.value - 1];
+});
+ 
+
+let animRunning = false;
+let skipFlag = false;
+let dpTable = null;
+ 
+
+function resetAll() {
+  skipFlag = true;
+  animRunning = false;
+  document.getElementById('result').textContent = 'Натисни «Запустити»...';
+  document.getElementById('dp-wrapper').style.display = 'none';
+  document.getElementById('dp-table-container').innerHTML = '';
+  document.getElementById('step-info').textContent = '';
+  document.getElementById('progress-bar').style.display = 'none';
+  document.getElementById('btnRun').disabled = false;
+  document.getElementById('btnSkip').disabled = true;
+}
+ 
+
+function buildEmptyTable(n, W) {
+  let html = '<table id="dp-table"><thead><tr><th>i \\ w</th>';
+  for (let w = 0; w <= W; w++) html += `<th>${w}</th>`;
+  html += '</tr></thead><tbody>';
+  for (let i = 0; i <= n; i++) {
+    html += `<tr><th>${i}</th>`;
+    for (let w = 0; w <= W; w++) {
+      html += `<td id="c${i}_${w}" class="cell-zero">0</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  document.getElementById('dp-table-container').innerHTML = html;
+}
+ 
+
+function setCell(i, w, val, cls) {
+  const el = document.getElementById(`c${i}_${w}`);
+  if (!el) return;
+  el.textContent = val;
+  el.className = cls;
+}
+ 
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+ 
+
+async function startDP() {
+  const items = getItems();
+  const W = getW();
+  const n = items.length;
+ 
+  skipFlag = false;
+  animRunning = true;
+  document.getElementById('btnRun').disabled = true;
+  document.getElementById('btnSkip').disabled = false;
+  document.getElementById('result').textContent = '⏳ Виконується...';
+ 
+
+  document.getElementById('dp-wrapper').style.display = 'block';
+  document.getElementById('progress-bar').style.display = 'block';
+  buildEmptyTable(n, W);
+ 
+  const dp = Array.from({length: n+1}, () => Array(W+1).fill(0));
+  const total = n * (W + 1);
+  let done = 0;
+ 
+
+  for (let i = 1; i <= n; i++) {
+    for (let w = 0; w <= W; w++) {
+ 
+     
+      setCell(i, w, dp[i][w] || 0, 'cell-current');
+ 
+      if (!skipFlag) {
+        const delay = getDelay();
+        if (delay >= 30) {
+         
+          document.getElementById('step-info').textContent =
+            `Крок: i=${i} (Предмет ${items[i-1].id}, w=${items[i-1].w}, v=${items[i-1].v}), місткість w=${w}` +
+            (w >= items[i-1].w
+              ? ` → max(${dp[i-1][w]}, ${dp[i-1][w-items[i-1].w]}+${items[i-1].v})`
+              : ` → предмет важить ${items[i-1].w} > ${w}, пропускаємо`);
+          await sleep(delay);
+        }
+      }
+ 
+   
+      dp[i][w] = dp[i-1][w];
+      if (w >= items[i-1].w) {
+        dp[i][w] = Math.max(dp[i][w], dp[i-1][w - items[i-1].w] + items[i-1].v);
+      }
+ 
+      setCell(i, w, dp[i][w], dp[i][w] > 0 ? 'cell-filled' : 'cell-zero');
+ 
+      done++;
+      document.getElementById('progress-fill').style.width = (done / total * 100) + '%';
+ 
+      if (!skipFlag && getDelay() < 30) await sleep(0); // yield to browser
+    }
+  }
+ 
+  dpTable = dp;
+ 
+ 
+  document.getElementById('step-info').textContent = 'Відновлення оптимального розв\'язку (backtracking)...';
+  if (!skipFlag) await sleep(300);
+ 
+  const path = new Set();
+  let pw = W, chosen = [];
+  for (let i = n; i > 0; i--) {
+    path.add(`${i},${pw}`);
+    if (dp[i][pw] !== dp[i-1][pw]) {
+      chosen.push(items[i-1]);
+      pw -= items[i-1].w;
+      if (!skipFlag) await sleep(skipFlag ? 0 : Math.max(getDelay(), 100));
+    }
+  }
+ 
+  
+  for (const key of path) {
+    const [i, w] = key.split(',').map(Number);
+    if (dp[i][w] > 0) setCell(i, w, dp[i][w], 'cell-path');
+  }
+ 
+
+  chosen.reverse();
+  const totalW = chosen.reduce((s, it) => s + it.w, 0);
+  const totalV = chosen.reduce((s, it) => s + it.v, 0);
+  const chosenStr = chosen.map(it => `  Предмет ${it.id}  (вага=${it.w}, цінність=${it.v})`).join('\n');
+ 
+  document.getElementById('result').textContent =
+    `✅ Максимальна цінність: ${dp[n][W]}\n\n` +
+    `Обрані предмети:\n${chosenStr}\n\n` +
+    `Загальна вага:    ${totalW} / ${W}\n` +
+    `Загальна цінність: ${totalV}`;
+ 
+  document.getElementById('step-info').textContent = '✅ Готово! Зелені клітинки — оптимальний шлях.';
+  document.getElementById('progress-fill').style.width = '100%';
+ 
+  animRunning = false;
+  document.getElementById('btnRun').disabled = false;
+  document.getElementById('btnSkip').disabled = true;
+}
+ 
+
+function skipAnim() {
+  skipFlag = true;
+  document.getElementById('btnSkip').disabled = true;
+}
+</script>
+</body>
+</html>
